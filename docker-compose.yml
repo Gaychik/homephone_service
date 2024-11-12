@@ -1,0 +1,63 @@
+services:
+  api_gateway:
+    image: api_gateway_image
+    ports:
+      - "5000:5000"
+    depends_on:
+      - user_service
+      - call_service
+    environment:
+      - USER_SERVICE_URL = http://user_service:5001
+        CALL_SERVICE_URL = http://call_service:5002
+
+  user_service:
+    image: user_service_image
+    ports:
+      - "5001:5001"
+    environment:
+      - DATABASE_URL=postgres://user:1234@db/users_db
+    depends_on:
+      - logging_service
+   
+  call_service:
+    image: call_service_image
+    ports:
+      - "5002:5002"
+    environment:
+      - DATABASE_URL=postgres://user:1234@db/users_db
+    depends_on:
+      - callcache_service
+      - logging_service
+   
+  callcache_service:
+    image: callcache_service_image
+    ports:
+      - "5003:5003"
+    environment:
+      - CACHE_URL=redis://redis:6379/0
+    depends_on:
+      - callcache_service
+
+  logging_service:
+    image: logging_service_image
+    ports:
+      - "5004:5004"
+
+  db:
+    image: postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: 1234
+      POSTGRES_DB: users_db
+
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+  nginx:
+    build:
+      context: ./nginx
+    ports:
+      - "80:80"
+    depends_on:
+      - api_gateway
